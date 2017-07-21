@@ -24,6 +24,17 @@
   <div class="pos">
     <div id = "user_name">{{ post.user.username }}</div>
         <img src="{{ post.image_url }}" /><br>
+        <center>
+        {% for tag in post.tag_list %}
+        <button >
+            <div>
+              <span>&#9733;</span>
+                <a href="/search?q={{tag.id_of_hashtag.name}}" class="button">{{tag.id_of_hashtag.name}}</a>
+              <span>&#9733;</span>
+            </div>
+        </button>
+        {% endfor %}
+      </center>
 
        <form method="POST" action="/like/">
               {% csrf_token %}
@@ -62,27 +73,4 @@
 
 
 </body>
-    <script src="http://code.jquery.com/jquery-1.11.0.min.js"></script>
-
-     <script type="text/javascript">
-         $(document).on('submit','#like_p',function(e){
-           e.preventDefault();
-
-          $.ajax({
-            type:'POST',
-            url:'/like/',
-               beforeSend: function(xhr, settings) {
-               if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
-                xhr.setRequestHeader("X-CSRFToken", csrftoken);
-        }
-          success:function(){
-
-          }
-
-          });
-
-
-         });
-     </script>
-
 </html>

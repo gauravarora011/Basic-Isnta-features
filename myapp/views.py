@@ -11,15 +11,17 @@ from django.shortcuts import render, redirect
 from django.utils import timezone
 
 from forms import SignUpForm, LoginForm, PostForm, LikeForm, CommentForm
-from models import UserModel, SessionToken, PostModel, LikeModel, CommentModel
+from models import UserModel, SessionToken, PostModel, LikeModel, CommentModel,HashTag,Hash2Post
 from django.contrib.auth.hashers import make_password, check_password
 
-##from clarifai.rest import ClarifaiApp
-
-##app = ClarifaiApp(api_key="cb9a1545abae4564b05f09ed29184530")
+from clarifai.rest import ClarifaiApp
+clarifai_app = ClarifaiApp(api_key="cb9a1545abae4564b05f09ed29184530")
+model = clarifai_app.models.get("general-v1.3")
 
 YOUR_CLIENT_ID = 'a8e20f3bf815329'
 YOUR_CLIENT_SECRET = '3863df53283968a0e35040e1bdacb55fc3c43853'
+
+#API_KEY = "e0f220cb1ecc4c9db02346dcec27f7cf"
 
 
 def signup_view(request):
@@ -30,7 +32,6 @@ def signup_view(request):
             name = form.cleaned_data['name']
             email = form.cleaned_data['email']
             password = form.cleaned_data['password']
-            # saving data to DB
             user = UserModel(name=name, password=make_password(password), email=email, username=username)
             user.save()
             return redirect('login/')
@@ -48,7 +49,6 @@ def login_view(request):
             username = form.cleaned_data.get('username')
             password = form.cleaned_data.get('password')
             user = UserModel.objects.filter(username=username).first()
-
             if user:
                 if check_password(password, user.password):
                     token = SessionToken(user=user)
@@ -69,7 +69,6 @@ def login_view(request):
 
 def post_view(request):
     user = check_validation(request)
-
     if user:
         if request.method == 'POST':
             form = PostForm(request.POST, request.FILES)
@@ -78,36 +77,54 @@ def post_view(request):
                 caption = form.cleaned_data.get('caption')
                 post = PostModel(user=user, image=image, caption=caption)
                 post.save()
-
                 path = str(BASE_DIR +'/'+ post.image.url)
-
                 client = ImgurClient(YOUR_CLIENT_ID, YOUR_CLIENT_SECRET)
                 post.image_url = client.upload_from_path(path, anon=True)['link']
                 post.save()
-
+                concepts = model.predict_by_url(url=post.image_url)['outputs'][0]['data']['concepts']
+                for concept in concepts[:5]:
+                    tag = concept['name']
+                    hash = HashTag.objects.filter(name  = tag)
+                    if(hash.__len__() == 0):
+                        hash = HashTag(name = tag)
+                        hash.save()
+                    else:
+                        hash = hash[0]
+                    Hash2Post(id_of_hashtag = hash, id_of_post = post).save()
                 return redirect('/feed/')
-
         else:
             form = PostForm()
         return render(request, 'post.html', {'form': form})
     else:
         return redirect('/login/')
 
-
 def feed_view(request):
     user = check_validation(request)
     if user:
-
         posts = PostModel.objects.all().order_by('-created_on')
-
         for post in posts:
             existing_like = LikeModel.objects.filter(post_id=post.id, user=user).first()
             if existing_like:
                 post.has_liked = True
-
         return render(request, 'feed.html', {'posts': posts})
     else:
+        return redirect('/login/')
 
+def tag_view(request):
+    user = check_validation(request)
+    if user:
+        q = request.GET.get('q')
+        hash = HashTag.objects.filter(name = q).first()
+        posts = Hash2Post.objects.filter(id_of_hashtag = hash)
+        posts = [post.id_of_post for post in posts]
+        if (posts == []):
+            return HttpResponse("<H1><CENTER>NO SUCH TAG FOUND</H1>")
+        for post in posts:
+            existing_like = LikeModel.objects.filter(post_id=post.id, user=user).first()
+            if existing_like:
+                post.has_liked = True
+        return render(request, 'feed.html', {'posts': posts})
+    else:
         return redirect('/login/')
 
 

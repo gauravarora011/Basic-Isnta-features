@@ -34,6 +34,10 @@ class PostModel(models.Model):
     updated_on = models.DateTimeField(auto_now=True)
 
     @property
+    def tag_list(self):
+        return Hash2Post.objects.filter(id_of_post=self)
+
+    @property
     def like_count(self):
         return len(LikeModel.objects.filter(post=self))
 
