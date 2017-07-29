@@ -14,14 +14,13 @@ from forms import SignUpForm, LoginForm, PostForm, LikeForm, CommentForm
 from models import UserModel, SessionToken, PostModel, LikeModel, CommentModel,HashTag,Hash2Post
 from django.contrib.auth.hashers import make_password, check_password
 
+### API Credentials
 from clarifai.rest import ClarifaiApp
 clarifai_app = ClarifaiApp(api_key="cb9a1545abae4564b05f09ed29184530")
 model = clarifai_app.models.get("general-v1.3")
 
 YOUR_CLIENT_ID = 'a8e20f3bf815329'
 YOUR_CLIENT_SECRET = '3863df53283968a0e35040e1bdacb55fc3c43853'
-
-#API_KEY = "e0f220cb1ecc4c9db02346dcec27f7cf"
 
 
 def signup_view(request):
